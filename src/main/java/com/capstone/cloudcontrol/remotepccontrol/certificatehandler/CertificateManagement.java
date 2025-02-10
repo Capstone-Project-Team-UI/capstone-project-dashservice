@@ -5,25 +5,31 @@ import com.amazonaws.auth.BasicAWSCredentials;
 import com.amazonaws.services.secretsmanager.AWSSecretsManager;
 import com.amazonaws.services.secretsmanager.AWSSecretsManagerClientBuilder;
 import com.amazonaws.services.secretsmanager.model.*;
-import com.capstone.cloudcontrol.remotepccontrol.usermanagement.UserManagement;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import io.github.cdimascio.dotenv.Dotenv;
+
+import org.apache.http.HttpStatus;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.jackson.JsonObjectSerializer;
+import org.springframework.http.ResponseEntity;
 import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.jdbc.core.simple.JdbcClient;
 import org.springframework.stereotype.Service;
+import org.springframework.web.client.RestTemplate;
 
 import java.io.File;
 import java.io.FileOutputStream;
 import java.io.IOException;
+import java.net.URI;
+import java.net.URLEncoder;
+import java.nio.charset.StandardCharsets;
 import java.util.HashMap;
 import java.util.Map;
 
 import com.capstone.cloudcontrol.remotepccontrol.usermanagement.user;
-import com.capstone.cloudcontrol.remotepccontrol.usermanagement.UserManagement;
+
 
 @Service
 public class CertificateManagement {
@@ -81,6 +87,7 @@ public class CertificateManagement {
                 logger.error("Error in downloading certificate files: " + e.getMessage(), e);
             }
         }
+    @SuppressWarnings("deprecation")
     public void pushCertificate(Certificate certificate) {
         try {
             user user = new user(
@@ -92,10 +99,25 @@ public class CertificateManagement {
             );
             
             
-            if (!UserManagement.userExists(jdbcClient, user)) {
-                logger.warn("User does not exist. Cannot push certificate for: " + certificate.uniqueID());
-                throw new IllegalArgumentException("User does not exist in the database.");
-            }
+            RestTemplate restTemplate = new RestTemplate();
+            Logger logger = LoggerFactory.getLogger(getClass());
+           
+                   // Construct URL with query parameters
+            String checkUserUrl = String.format(
+                       "http://localhost:8090/users/checkUser?userID=%s&organization=%s&serialNumber=%s&uniqueID=%s&emailAddress=%s",
+                       URLEncoder.encode(certificate.userID(), StandardCharsets.UTF_8),
+                       URLEncoder.encode(certificate.organization(), StandardCharsets.UTF_8),
+                       URLEncoder.encode(certificate.serialNumber(), StandardCharsets.UTF_8),
+                       URLEncoder.encode(certificate.uniqueID(), StandardCharsets.UTF_8),
+                       URLEncoder.encode(certificate.emailAddress(), StandardCharsets.UTF_8)
+                   );
+           
+            ResponseEntity<String> response = restTemplate.getForEntity(URI.create(checkUserUrl), String.class);
+           
+            if (response.getStatusCodeValue() != HttpStatus.SC_OK) {
+                       logger.warn("User does not exist. Cannot push certificate for: " + certificate.uniqueID());
+                       throw new IllegalArgumentException("User does not exist in the database.");
+                   }
             
 
             String secretName = getSecretName(certificate);
@@ -122,6 +144,7 @@ public class CertificateManagement {
         }
     }
 
+    @SuppressWarnings("unchecked")
     public Map<String, String> getCertificate(String organization, String serialNumber, String uniqueID) {
         try {
             String secretName = String.format("%s/%s/%s", organization, serialNumber, uniqueID);

@@ -101,23 +101,6 @@ public class CertificateManagement {
             
             RestTemplate restTemplate = new RestTemplate();
             Logger logger = LoggerFactory.getLogger(getClass());
-           
-                   // Construct URL with query parameters
-            String checkUserUrl = String.format(
-                       "http://localhost:8090/users/checkUser?userID=%s&organization=%s&serialNumber=%s&uniqueID=%s&emailAddress=%s",
-                       URLEncoder.encode(certificate.userID(), StandardCharsets.UTF_8),
-                       URLEncoder.encode(certificate.organization(), StandardCharsets.UTF_8),
-                       URLEncoder.encode(certificate.serialNumber(), StandardCharsets.UTF_8),
-                       URLEncoder.encode(certificate.uniqueID(), StandardCharsets.UTF_8),
-                       URLEncoder.encode(certificate.emailAddress(), StandardCharsets.UTF_8)
-                   );
-           
-            ResponseEntity<String> response = restTemplate.getForEntity(URI.create(checkUserUrl), String.class);
-           
-            if (response.getStatusCodeValue() != HttpStatus.SC_OK) {
-                       logger.warn("User does not exist. Cannot push certificate for: " + certificate.uniqueID());
-                       throw new IllegalArgumentException("User does not exist in the database.");
-                   }
             
 
             String secretName = getSecretName(certificate);

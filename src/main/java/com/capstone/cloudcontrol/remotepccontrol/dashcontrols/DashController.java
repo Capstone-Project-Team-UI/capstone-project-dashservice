@@ -4,25 +4,25 @@ import org.springframework.web.bind.annotation.*;
 import java.io.*;
 
 @RestController
-@RequestMapping("/api")
+@RequestMapping("/api/local")
 public class DashController {
 
     private static final String DASH_CLI_DIR = "C:\\Program Files\\DASH CLI 7.0\\bin";
 
     @GetMapping("/check_status")
     public String checkStatus(@RequestParam String host, @RequestParam String user, @RequestParam String password) {
-        return executeDashCommand(host, user, password, "status");
+        return executeDashCommand(host, user, password, "enumerate computersystem");
     }
 
     @PostMapping("/start_kvm")
     public String startKvm(@RequestParam String host, @RequestParam String user, @RequestParam String password) {
-        return executeDashCommand(host, user, password, "kvmredirection[0] startkvm");
+        return executeDashCommand(host, user, password, "-t kvmredirection[0] startkvm");
     }
 
     private String executeDashCommand(String host, String user, String password, String command) {
         try {
             ProcessBuilder processBuilder = new ProcessBuilder(
-                "cmd.exe", "/c", ".\\dashcli.exe -h " + host + " -u " + user + " -P " + password + " -S https -C -p 664 -t " + command
+                "cmd.exe", "/c", ".\\dashcli.exe -h " + host + " -u " + user + " -P " + password + " -S https -C -p 664 " + command
             );
             processBuilder.directory(new File(DASH_CLI_DIR));
             processBuilder.redirectErrorStream(true); // Merge output and error streams
